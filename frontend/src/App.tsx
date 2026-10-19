@@ -1,27 +1,10 @@
 import { useState } from 'react'
-
-interface Vulnerability {
-  id: string
-  summary: string
-  details: string
-}
-
-interface PackageInfo {
-  name: string
-  operator?: string
-  version: string
-  raw: string
-  vulnerable: boolean
-  error: boolean
-  error_message: string
-  vulns: Vulnerability[]
-}
-
-interface ScanResult {
-  filename: string
-  count: number
-  packages: PackageInfo[]
-}
+import { type ScanResult } from './types'
+import { uploadRequirementsFile } from './services/api'
+import FileUpload from './components/FileUpload'
+import SearchBar, { type FilterStatus } from './components/SearchBar'
+import ResultsTable from './components/ResultsTable'
+import ErrorAlert from './components/ErrorAlert'
 
 export default function App() {
   const [file, setFile] = useState<File | null>(null)
@@ -29,12 +12,9 @@ export default function App() {
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0])
-      setError(null)
-    }
-  }
+  const [searchTerm, setSearchTerm] = useState<string>('')
+  const [statusFilter, setStatusFilter] = useState<FilterStatus>('all')
+  const [sortByVuln, setSortByVuln] = useState<boolean>(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -47,21 +27,8 @@ export default function App() {
     setError(null)
     setResult(null)
 
-    const formData = new FormData()
-    formData.append('file', file)
-
     try {
-      const response = await fetch('http://localhost:8000/api/upload/', {
-        method: 'POST',
-        body: formData,
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || `Erreur serveur (Code ${response.status})`)
-      }
-
+      const data = await uploadRequirementsFile(file)
       setResult(data)
     } catch (err: any) {
       setError(err.message || 'Une erreur est survenue lors du scan.')
@@ -70,77 +37,51 @@ export default function App() {
     }
   }
 
+  const filteredPackages = (result?.packages || []).filter(pkg => {
+    const matchesSearch = pkg.name.toLowerCase().includes(searchTerm.toLowerCase())
+
+    if (!matchesSearch) return false
+
+    if (statusFilter === 'vulnerable') return pkg.vulnerable
+    if (statusFilter === 'safe') return !pkg.vulnerable && !pkg.error
+    if (statusFilter === 'error') return pkg.error
+
+    return true
+  })
+
+  const processedPackages = [...filteredPackages].sort((a, b) => {
+    if (!sortByVuln) return 0
+    if (a.vulnerable && !b.vulnerable) return -1
+    if (!a.vulnerable && b.vulnerable) return 1
+    return 0
+  })
+
   return (
-    <div style={{ padding: '2rem', fontFamily: 'sans-serif', maxWidth: '900px', margin: '0 auto' }}>
+    <div style={{ padding: '2rem', fontFamily: 'sans-serif', maxWidth: '1000px', margin: '0 auto' }}>
       <h1>Scanner de Vulnérabilités (requirements.txt)</h1>
 
-      <form onSubmit={handleSubmit} style={{ marginBottom: '2rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
-        <input type="file" accept=".txt" onChange={handleFileChange} />
-        <button
-          type="submit"
-          disabled={loading}
-          style={{ padding: '0.5rem 1rem', cursor: loading ? 'not-allowed' : 'pointer' }}
-        >
-          {loading ? 'Analyse en cours (OSV.dev)...' : 'Scanner le fichier'}
-        </button>
-      </form>
+      <FileUpload
+        onFileSelect={setFile}
+        onSubmit={handleSubmit}
+        loading={loading}
+      />
 
-      {error && <p style={{ color: 'red', fontWeight: 'bold' }}>❌ {error}</p>}
+      <ErrorAlert message={error} />
 
       {result && (
         <div>
-          <h3>Résultats pour : {result.filename} ({result.count} packages analysés)</h3>
+          <h3>Résultats pour : {result.filename} ({filteredPackages.count || filteredPackages.length} packages affichés)</h3>
 
-          <table border={1} cellPadding={8} style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
-            <thead>
-              <tr style={{ background: '#f4f4f4', textAlign: 'left' }}>
-                <th>Package</th>
-                <th>Version</th>
-                <th>Statut Sécurité</th>
-                <th>Détails / Erreurs</th>
-              </tr>
-            </thead>
-            <tbody>
-              {result.packages.map((pkg, index) => (
-                <tr key={index}>
-                  <td><strong>{pkg.name}</strong></td>
-                  <td>{pkg.raw}</td>
-                  <td>
-                    {pkg.error ? (
-                      <span style={{ color: 'white', background: '#f39c12', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.85rem' }}>
-                        ⚠️ Erreur d'analyse
-                      </span>
-                    ) : pkg.vulnerable ? (
-                      <span style={{ color: 'white', background: '#e74c3c', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.85rem' }}>
-                        ⚠️ Vulnérable ({pkg.vulns.length})
-                      </span>
-                    ) : (
-                      <span style={{ color: 'white', background: '#2ecc71', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.85rem' }}>
-                        ✅ Sûr
-                      </span>
-                    )}
-                  </td>
-                  <td>
-                    {pkg.error ? (
-                      <span style={{ color: '#d35400', fontSize: '0.9rem', fontStyle: 'italic' }}>
-                        {pkg.error_message}
-                      </span>
-                    ) : pkg.vulnerable ? (
-                      <ul style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.9rem' }}>
-                        {pkg.vulns.map((v, vIndex) => (
-                          <li key={vIndex}>
-                            <strong>{v.id}</strong>: {v.summary}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <span style={{ color: '#7f8c8d', fontSize: '0.9rem' }}>Aucune vulnérabilité détectée</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <SearchBar
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            statusFilter={statusFilter}
+            onFilterChange={setStatusFilter}
+            sortByVuln={sortByVuln}
+            onToggleSort={() => setSortByVuln(!sortByVuln)}
+          />
+
+          <ResultsTable packages={processedPackages} />
         </div>
       )}
     </div>
