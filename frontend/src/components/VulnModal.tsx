@@ -17,6 +17,16 @@ export default function VulnModal({ vuln, onClose }: VulnModalProps) {
         <h3>Détails de la vulnérabilité : {vuln.id}</h3>
         <p><strong>Résumé :</strong> {vuln.summary}</p>
         <p><strong>Description :</strong> {vuln.details || "Aucun détail supplémentaire disponible."}</p>
+        <p>
+          <strong>Source :</strong>{' '}
+          <a
+            href={`https://osv.dev/vulnerability/${vuln.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Voir sur OSV.dev ({vuln.id})
+          </a>
+        </p>
         <button onClick={onClose} style={{ marginTop: '1rem', padding: '0.4rem 1rem', cursor: 'pointer' }}>
           Fermer
         </button>
