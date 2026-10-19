@@ -13,6 +13,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null)
 
   const [searchTerm, setSearchTerm] = useState<string>('')
+  const [severityFilter, setSeverityFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('all')
   const [sortByVuln, setSortByVuln] = useState<boolean>(false)
 
@@ -39,16 +40,20 @@ export default function App() {
 
   const filteredPackages = (result?.packages || []).filter(pkg => {
     const matchesSearch = pkg.name.toLowerCase().includes(searchTerm.toLowerCase())
-
     if (!matchesSearch) return false
 
-    if (statusFilter === 'vulnerable') return pkg.vulnerable
-    if (statusFilter === 'safe') return !pkg.vulnerable && !pkg.error
-    if (statusFilter === 'error') return pkg.error
+    if (statusFilter === 'vulnerable' && !pkg.vulnerable) return false
+    if (statusFilter === 'safe' && (pkg.vulnerable || pkg.error)) return false
+    if (statusFilter === 'error' && !pkg.error) return false
+
+    // Filtre par sévérité si demandé
+    if (severityFilter !== 'all') {
+      const hasMatchingSeverity = pkg.vulns.some(v => v.severity?.includes(severityFilter))
+      if (!hasMatchingSeverity) return false
+    }
 
     return true
   })
-
   const processedPackages = [...filteredPackages].sort((a, b) => {
     if (!sortByVuln) return 0
     if (a.vulnerable && !b.vulnerable) return -1
@@ -70,13 +75,15 @@ export default function App() {
 
       {result && (
         <div>
-          <h3>Résultats pour : {result.filename} ({filteredPackages.count || filteredPackages.length} packages affichés)</h3>
+          <h3>Résultats pour : {result.filename} ({filteredPackages.length || filteredPackages.length} packages affichés)</h3>
 
           <SearchBar
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
             statusFilter={statusFilter}
             onFilterChange={setStatusFilter}
+            severityFilter={severityFilter}
+            onSeverityChange={setSeverityFilter}
             sortByVuln={sortByVuln}
             onToggleSort={() => setSortByVuln(!sortByVuln)}
           />

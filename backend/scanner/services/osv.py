@@ -30,18 +30,28 @@ class OsvVulnerabilityService:
             if response.status_code == 200:
                 data = response.json()
                 vulns = data.get("vulns", [])
+                formatted_vulns = []
+                for v in vulns:
+                    severity = "UNKNOWN"
+                    database_specific = v.get("database_specific", {})
+                    if "severity" in database_specific:
+                        severity = database_specific["severity"]
+                    elif "affected" in v:
+                        for entry in v.get("severity", []):
+                            if "score" in entry:
+                                severity = entry["score"]
+
+                    formatted_vulns.append({
+                        "id": v.get("id"),
+                        "summary": v.get("summary", "Pas de résumé disponible"),
+                        "details": v.get("details", "Aucun détail supplémentaire disponible."),
+                        "severity": str(severity).upper()
+                    })
                 return {
                     "vulnerable": len(vulns) > 0,
                     "error": False,
                     "error_message": "",
-                    "vulns": [
-                        {
-                            "id": v.get("id"),
-                            "summary": v.get("summary", "Pas de résumé disponible"),
-                            "details": v.get("details", "")[:200] + "..." if v.get("details") else ""
-                        }
-                        for v in vulns
-                    ]
+                    "vulns": formatted_vulns
                 }
             else:
                 return {

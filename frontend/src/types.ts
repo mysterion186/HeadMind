@@ -2,10 +2,12 @@ export interface Vulnerability {
   id: string
   summary: string
   details: string
+  severity?: string
 }
 
 export interface PackageInfo {
   name: string
+  count: number
   operator?: string
   version: string
   raw: string
