@@ -12,7 +12,7 @@ Afin d'assurer la portabilité et de faciliter l'évaluation, l'application est 
 1. **Prérequis** : Avoir [Docker](https://www.docker.com/) et Docker Compose installés.
 2. **Lancer l'application** : À la racine du projet, exécutez :
    ```bash
-   docker-compose up --build
+   docker compose up --build
    ```
 Accès aux services :
 
@@ -20,6 +20,11 @@ Frontend (React) : http://localhost:5173
 
 Backend API (Django) : http://localhost:8000/api/upload/
 
+## Tests (Backend)
+Une suite de tests complète a été implémentée pour garantir la non-régression et la robustesse du service :  
+-  **Test du parser**: Validation de l'extraction des packages et des versions sur des formats standard, gestion des commentaires en fin de ligne et des cas limites (fichiers vides, options spécifiques).  
+-  **Tests du Service OSV**: Utilisation de mocks (`unittest.mock`) pour simuler les réponses de l'API externe (cas nominaux, absence de version) ainsi que la gestion des erreurs réseau et des timeouts.
+-  **Tests de l'API / Vues**: Tests d'intégration du endpoint d'upload (validation des extensions de fichiers, gestion des erreurs 400 et succès avec mock du service OSV).   
 
 ## Choix techniques et justifications
 Backend : Python (Django & Django REST Framework)  
@@ -31,7 +36,11 @@ Frontend : React + TypeScript + Vite
 **Sécurité du typage (TypeScript)** : Garantie d'une excellente rigueur sur les contrats d'interface (structures de données pour les packages et les objets de vulnérabilité OSV).  
 **Vite** : Choix d'un bundler moderne offrant un temps de démarrage quasi instantané et une expérience de développement fluide.  
 **Composants atomiques** : Découpage propre des composants UI (FileUpload, SearchBar, ResultsTable, VulnModal, ErrorAlert) favorisant la réutilisabilité et la lisibilité du code.  
-**Expérience Utilisateur (UX)** : Implémentation d'une gestion complète des états (chargement, erreurs réseau, absence de résultat), filtres dynamiques (recherche textuelle, filtrage par niveau de sévérité ou par état de sécurité) et modale de détail.  
+**Expérience Utilisateur (UX)** : Implémentation d'une gestion complète des états (chargement, erreurs réseau, absence de résultat), filtres dynamiques (recherche textuelle, filtrage par niveau de sévérité ou par état de sécurité) et modale de détail.   
+Lancement des tests:
+```bash
+docker compose run backend python manage.py test scanner
+``` 
 
 ## Bilan du projet, limites et perspectives d'amélioration
 Dans le cadre du temps imparti pour ce test (4 à 6 heures), la priorité a été donnée à la livraison d'un périmètre fonctionnel complet, stable et propre.
