@@ -2,8 +2,12 @@ import re
 
 
 class RequirementsParserService:
-    @staticmethod
-    def parse(file_obj):
+    PACKAGE_NAME_REGEX = re.compile(
+        r"^([A-Z0-9]|[A-Z0-9][A-Z0-9._-]*[A-Z0-9])$", re.IGNORECASE
+    )
+
+    @classmethod
+    def parse(cls, file_obj):
         """
         Lit un fichier requirements.txt et extrait les packages et leurs versions.
         """
@@ -22,17 +26,21 @@ class RequirementsParserService:
 
             if match:
                 name, operator, version = match.groups()
-                packages.append(
-                    {
-                        "name": name.strip(),
-                        "version": version.strip(),
-                        "raw": decoded_line,
-                    }
-                )
+                name = name.strip()
+                version = version.strip()
             else:
-                packages.append(
-                    {"name": decoded_line, "version": "latest", "raw": decoded_line}
-                )
+                name = decoded_line
+                version = "latest"
+
+            if not cls.PACKAGE_NAME_REGEX.match(name):
+                continue
+
+            packages.append(
+                {
+                    "name": name,
+                    "version": version,
+                    "raw": decoded_line,
+                }
+            )
 
         return packages
-
