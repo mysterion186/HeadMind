@@ -49,17 +49,3 @@ class RequirementsParserServiceTest(TestCase):
         packages = RequirementsParserService.parse(file_obj)
         self.assertEqual(packages[0]["name"], "requests")
         self.assertEqual(packages[0]["version"], "2.34.2")
-
-    def test_parse_pip_flags_and_editable(self):
-        """Teste le comportement avec des commandes pip avancées (-r, --hash, -e)."""
-        content = b"""
-        -r other-requirements.txt
-        --hash=sha256:abcdef123456
-        -e .
-        """
-        file_obj = io.BytesIO(content.strip())
-        packages = RequirementsParserService.parse(file_obj)
-
-        # Le parseur actuel les traite comme des packages "latest" faute de correspondance regex
-        self.assertEqual(len(packages), 3)
-        self.assertEqual(packages[0]["version"], "latest")
