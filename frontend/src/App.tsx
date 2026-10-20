@@ -5,6 +5,7 @@ import FileUpload from './components/FileUpload'
 import SearchBar, { type FilterStatus } from './components/SearchBar'
 import ResultsTable from './components/ResultsTable'
 import ErrorAlert from './components/ErrorAlert'
+import Spinner from './components/Spinner'
 
 export default function App() {
   const [file, setFile] = useState<File | null>(null)
@@ -73,7 +74,9 @@ export default function App() {
 
       <ErrorAlert message={error} />
 
-      {result && (
+      {loading && <Spinner />}
+
+      {result && !loading && (
         <div>
           <h3>Résultats pour : {result.filename} ({filteredPackages.length || filteredPackages.length} packages affichés)</h3>
 
