@@ -63,8 +63,10 @@ export default function App() {
   })
 
   return (
-    <div style={{ padding: '2rem', fontFamily: 'sans-serif', maxWidth: '1000px', margin: '0 auto' }}>
-      <h1>Scanner de Vulnérabilités (requirements.txt)</h1>
+    <div className="mx-auto max-w-5xl p-8 font-sans text-gray-900">
+      <h1 className="mb-8 text-3xl font-extrabold tracking-tight text-gray-900 border-b pb-4">
+        Scanner de Vulnérabilités <span className="text-purple-600 font-mono text-lg font-normal">(requirements.txt)</span>
+      </h1>
 
       <FileUpload
         onFileSelect={setFile}
@@ -77,8 +79,13 @@ export default function App() {
       {loading && <Spinner />}
 
       {result && !loading && (
-        <div>
-          <h3>Résultats pour : {result.filename} ({filteredPackages.length || filteredPackages.length} packages affichés)</h3>
+        <div className="mt-8 space-y-6">
+          <h3 className="text-xl font-bold text-gray-800">
+            Résultats pour : <span className="text-purple-700">{result.filename}</span>{' '}
+            <span className="text-xs font-normal text-gray-500">
+              ({processedPackages.length} packages affichés)
+            </span>
+          </h3>
 
           <SearchBar
             searchTerm={searchTerm}

@@ -22,19 +22,19 @@ export default function SearchBar({
   onToggleSort
 }: SearchBarProps) {
   return (
-    <div style={{ marginBottom: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+    <div className="mb-6 flex flex-wrap items-center gap-3">
       <input
         type="text"
         placeholder="Filtrer par nom..."
         value={searchTerm}
         onChange={(e) => onSearchChange(e.target.value)}
-        style={{ padding: '0.5rem', width: '180px' }}
+        className="w-48 rounded-md border border-gray-300 p-2 text-sm text-gray-800 placeholder-gray-400 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
       />
 
       <select
         value={statusFilter}
         onChange={(e) => onFilterChange(e.target.value as FilterStatus)}
-        style={{ padding: '0.5rem' }}
+        className="rounded-md border border-gray-300 p-2 text-sm text-gray-800 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 cursor-pointer"
       >
         <option value="all">Tous les statuts</option>
         <option value="vulnerable">⚠️ Vulnérables</option>
@@ -42,11 +42,10 @@ export default function SearchBar({
         <option value="error">⚠️ Erreurs</option>
       </select>
 
-      {/* Nouveau filtre par Sévérité */}
       <select
         value={severityFilter}
         onChange={(e) => onSeverityChange(e.target.value)}
-        style={{ padding: '0.5rem' }}
+        className="rounded-md border border-gray-300 p-2 text-sm text-gray-800 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 cursor-pointer"
       >
         <option value="all">Toutes sévérités</option>
         <option value="CRITICAL">Critical</option>
@@ -58,7 +57,10 @@ export default function SearchBar({
       <button
         type="button"
         onClick={onToggleSort}
-        style={{ padding: '0.5rem 1rem', cursor: 'pointer', background: sortByVuln ? '#e74c3c' : '#f4f4f4', color: sortByVuln ? 'white' : 'black', border: '1px solid #ccc', borderRadius: '4px' }}
+        className={`rounded-md border px-4 py-2 text-sm font-medium transition-colors cursor-pointer ${sortByVuln
+            ? 'bg-red-600 text-white border-red-600 hover:bg-red-700 shadow-xs'
+            : 'bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200'
+          }`}
       >
         {sortByVuln ? '🔥 Vulnérables en premier' : 'Tri par défaut'}
       </button>

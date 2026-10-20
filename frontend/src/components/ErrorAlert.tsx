@@ -6,8 +6,9 @@ export default function ErrorAlert({ message }: ErrorAlertProps) {
   if (!message) return null
 
   return (
-    <p style={{ color: 'red', fontWeight: 'bold', background: '#fadbd8', padding: '0.75rem', borderRadius: '4px' }}>
-      ❌ {message}
-    </p>
+    <div className="bg-red-100 text-red-700 font-bold p-3 rounded-md mb-4 flex items-center gap-2">
+      <span>❌</span>
+      <span>{message}</span>
+    </div>
   )
 }
