@@ -1,0 +1,2 @@
+super-fake-package==21.10.2026
+mon package inexistant==21.10.2026

@@ -1,0 +1,6 @@
+asgiref==3.12.1
+certifi==2026.10.18
+charset-normalizer==3.5.2
+PyYaml==5.3
+zipp==3.19.0
+
