@@ -2,6 +2,16 @@
 
 Cette application web permet d'auditer rapidement le fichier de dépendances d'un projet (`requirements.txt`) afin de détecter les vulnérabilités connues (CVE / GHSA) avant une mise en production, en s'appuyant sur l'API publique [OSV.dev](https://osv.dev/).
 
+
+## Fonctionnalités
+* Import d'un fichier `.txt` contenant des dépendances Python.  
+* Extraction des noms de packages et des informations de versions.
+* Interrogation de l'API OSV.dev pour les packages disposant d'une version exploitable.  
+* Affichage des vulnérabilités retournées par OSV, avec identifiant, résumé, détail et sévérité lorsqu'elle est disponible.  
+* Signalement des erreurs de communication avec l'API.
+* Interface React / TypeScript et API Django REST Framework.  
+* Environnement de développement lançable avec Docker Compose.  
+
 ---
 
 ## Instructions d'installation et de lancement
@@ -21,10 +31,41 @@ Frontend (React) : http://localhost:5173
 Backend API (Django) : http://localhost:8000/api/upload/
 
 ## Tests (Backend)
-Une suite de tests complète a été implémentée pour garantir la non-régression et la robustesse du service :  
+Une suite de tests a été implémentée pour garantir la non-régression et la robustesse du service :  
 -  **Test du parser**: Validation de l'extraction des packages et des versions sur des formats standard, gestion des commentaires en fin de ligne et des cas limites (fichiers vides, options spécifiques).  
 -  **Tests du Service OSV**: Utilisation de mocks (`unittest.mock`) pour simuler les réponses de l'API externe (cas nominaux, absence de version) ainsi que la gestion des erreurs réseau et des timeouts.
 -  **Tests de l'API / Vues**: Tests d'intégration du endpoint d'upload (validation des extensions de fichiers, gestion des erreurs 400 et succès avec mock du service OSV).   
+
+## Périmètre et limites connues
+### Contraintes de version dans `requirements.txt`
+L'API OSV permet de rechercher des vulnérabilités pour une version précise d'un package. Or, un fichier `requirements.txt` peut exprimer une contrainte plutôt qu'une version installée.  
+Exemples :  
+Déclaration	Interprétation
+requests==2.31.0	Version exacte déclarée : 2.31.0
+requests>=2.31.0	Version minimale ; la version réellement installée n'est pas connue à partir de cette seule ligne
+requests~=2.31.0	Contrainte compatible ; la version effectivement résolue n'est pas connue
+requests	Aucune version précisée
+
+Le résultat d'un scan ne doit pas être interprété comme une garantie de sécurité lorsque la version réellement installée est inconnue.  
+Une contrainte `>=2.31.0` ne doit pas être présentée comme si `2.31.0` était nécessairement la version utilisée.  
+
+Dans la version actuelle, le parsing des fichiers de dépendances est volontairement simple et ne couvre pas toute la grammaire de requirements.txt (par exemple, les fichiers inclus avec `-r`, les références directes ou toutes les formes de contraintes). Les lignes non prises en charge doivent être considérées comme une limite de couverture, pas comme la preuve que les dépendances concernées sont sûres.
+
+### Résultats inconnus et erreurs OSV
+Un scan réussi sans vulnérabilité trouvée et un scan qui n'a pas pu être effectué sont deux situations différentes.
+* Analyse réussie, vulnérabilité trouvée : OSV a retourné une ou plusieurs vulnérabilités pour la version interrogée.
+* Analyse réussie, aucune vulnérabilité retournée : OSV n'a retourné aucune vulnérabilité pour la version interrogée.
+* Analyse impossible ou incomplète : version inconnue, erreur HTTP ou problème réseau ; le statut de sécurité est alors inconnu.
+En cas d'erreur, vulnerable: false ne signifie donc pas que le package est sûr : le champ d'erreur doit également être vérifié. L'interface signale ces erreurs, mais tout consommateur de l'API doit conserver cette distinction.
+
+### Autres limites et pistes d'amélioration
+* Ajouter des tests de régression couvrant les différents opérateurs de version, les lignes non prises en charge, les réponses OSV incomplètes et les formats de sévérité.
+* Améliorer la validation des fichiers importés, notamment l'encodage, la taille et les syntaxes de dépendances non prises en charge.
+* Clarifier dans l'interface les cas où une analyse est incomplète et prévoir un état vide explicite.
+* Éviter de renvoyer directement les détails internes d'exceptions inattendues dans les réponses HTTP.
+* Pour un déploiement en production, remplacer les paramètres Django de développement par une configuration adaptée à l'environnement : secret externalisé, DEBUG=False, hôtes autorisés, serveur applicatif de production et contrôles de sécurité associés.
+* Optimisation des requêtes OSV.dev (Appels asynchrones / Batching)
+* Mise en place de cache pour enregistrer les couples packages/version et ne pas refaire de requête
 
 ## Choix techniques et justifications
 Backend : Python (Django & Django REST Framework)  
@@ -42,9 +83,6 @@ Lancement des tests:
 docker compose run backend python manage.py test scanner
 ``` 
 
-## Bilan du projet, limites et perspectives d'amélioration
-Dans le cadre du temps imparti pour ce test (4 à 6 heures), la priorité a été donnée à la livraison d'un périmètre fonctionnel complet, stable et propre.
-
 ### Ce qui a été réalisé
 [x] Backend : Endpoint d'upload et de parsing du fichier requirements.txt.  
 [x] Backend : Intégration de l'API publique OSV.dev et formatage des vulnérabilités (identifiant, résumé, sévérité, description).  
@@ -54,12 +92,14 @@ Dans le cadre du temps imparti pour ce test (4 à 6 heures), la priorité a ét�
 [x] Frontend : Containerisation et intégration dans Docker Compose.  
 
 
-### Limites identifiées & Axes d'amélioration (Vision Tech Lead)
-Avec davantage de temps ou pour un passage en production, voici les évolutions majeures qui auraient été apportées :  
-* Optimisation des requêtes OSV.dev (Appels asynchrones / Batching) :
-* Constat actuel : L'API backend interroge actuellement OSV.dev de manière séquentielle package par package. Sur un fichier contenant un grand nombre de dépendances, la latence cumulée des requêtes HTTP peut rallonger le temps de réponse global.  
-* Piste d'amélioration : Migration vers des requêtes asynchrones avec httpx / asyncio ou exploitation poussée du mode batch (/v1/querybatch) couplée à un mécanisme de requêtes secondaires pour les détails, ou encore mise en place de streaming HTTP (Server-Sent Events) pour restituer les résultats au fil de l'eau.
+## Exemple d'utilisation
 
-#### Stratégie de Cache :
-Intégration d'une couche de mise en cache (Redis ou cache en mémoire Django) pour stocker le statut des couples package:version déjà interrogés récemment, réduisant ainsi drastiquement la dépendance à l'API distante et économisant de la bande passante.  
+1. Importer un fichier `requirements.txt` (il y a des fichiers dans le dossier `samples/`).
+2. Lancer l'analyse.
+3. Consulter les dépendances analysées et les vulnérabilités détectées.
+4. Filtrer les résultats par nom de package, statut ou sévérité.
+5. Ouvrir une vulnérabilité pour consulter ses détails et sa source.
 
+Une dépendance dont la version ne peut pas être déterminée
+ou dont l'analyse a échoué doit être signalée comme inconnue,
+et non comme sûre.
